@@ -25,7 +25,7 @@ internal class Program
         
 
 
-        await SendEmailMessage(email);
+        //await SendEmailMessage(email);
         await ReceiveEmailMessage("email");
         Thread.Sleep(60000);
         await SendFailedEmail(email);
@@ -62,19 +62,11 @@ internal class Program
     }
     public static async Task SendFailedEmail(Email email)
     {
-        Email email1 = new Email()
-        {
-            BCC = "jayesh@silmac.com",
-            Body = "test mail",
-            CC = "Jayesh@silmac.com",
-            From = "jpatanvadiya1@gmail.com",
-            Subject = "test subject",
-            To = "jpatanvadiya1@gmail.com"
-        };
+       
         RabitMQService rabitMQ = new RabitMQService();
 
         // RabitMQ Implementation
-        var result = await rabitMQ.SendFailEmailMessage<Email>(email1, "FailedEmailModel", 86400000);
+        var result = await rabitMQ.SendFailEmailMessage<Email>(email, "FailedEmailModel", 86400000);
 
     }
     public static async Task ReceiveEmailFail(string route)
@@ -106,6 +98,7 @@ internal class Program
             string Password = config.GetSection("EmailSMTP:Password").Value;
 
             Console.WriteLine($"Environment is: {environment}");
+            Console.WriteLine($"Mail sent to: {email.To}");
 
             var portCast = Convert.ToInt32(port);
 

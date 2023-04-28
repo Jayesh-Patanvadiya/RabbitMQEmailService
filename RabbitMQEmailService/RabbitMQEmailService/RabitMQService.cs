@@ -44,10 +44,11 @@ namespace RabbitMQEmailService
                     return messagetemp;
                 }
             }
-            catch(Exception ex) {
+            catch (Exception ex)
+            {
                 throw new Exception(ex.Message, ex);
             }
-         
+
 
 
         }
@@ -78,7 +79,6 @@ namespace RabbitMQEmailService
 
                         var consumer = new EventingBasicConsumer(channel);
                         channel.BasicConsume(queue: routingKeyName, autoAck: true, consumer: consumer);
-                        Thread.Sleep(1000);
 
                         consumer.Received += async (model, ea) =>
                         {
@@ -97,9 +97,11 @@ namespace RabbitMQEmailService
 
                             }
                         };
-                     //   channel.BasicConsume(queue: routingKeyName,
-                     //autoAck: true,
-                     //consumer: consumer);
+                        Thread.Sleep(1000);
+
+                        //   channel.BasicConsume(queue: routingKeyName,
+                        //autoAck: true,
+                        //consumer: consumer);
                     }
 
                 }
@@ -177,8 +179,7 @@ namespace RabbitMQEmailService
                     using (var channel = connection.CreateModel())
                     {
                         //a “Email“ to a RabbitMQ FIFO Queue.A TTL should be set(24 hours).
-                        //var args = new Dictionary<string, object>();
-                        //args.Add("x-message-ttl", 86400000);
+
                         var args = new Dictionary<string, object>();
                         args.Add("x-message-ttl", 86400000);
                         args.Add("x-dead-letter-exchange", "FailedEmailExchange");
@@ -189,10 +190,10 @@ namespace RabbitMQEmailService
                      exclusive: false,
                      autoDelete: false,
                      arguments: args);
-                        //channel.BasicQos(prefetchSize: 0, prefetchCount: 100, global: false);
+                        channel.BasicQos(prefetchSize: 0, prefetchCount: 100, global: false);
 
                         var consumer = new EventingBasicConsumer(channel);
-                        //channel.BasicConsume(queue: routingKeyName, autoAck: false, consumer: consumer);
+                       channel.BasicConsume(queue: routingKeyName, autoAck: false, consumer: consumer);
 
                         consumer.Received += async (model, ea) =>
                         {
@@ -211,9 +212,11 @@ namespace RabbitMQEmailService
 
                             }
                         };
-                        channel.BasicConsume(queue: routingKeyName,
-                     autoAck: true,
-                     consumer: consumer);
+                        Thread.Sleep(1000);
+
+                        //   channel.BasicConsume(queue: routingKeyName,
+                        //autoAck: true,
+                        //consumer: consumer);
                     }
 
                 }
