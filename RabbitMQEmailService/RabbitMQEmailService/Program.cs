@@ -11,7 +11,7 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-
+        //F:\SampleApps\DotNetCore\Console\SampleConsoleApp\bin\Debug\net7.0>set DOTNET_ENVIRONMENT=Production
 
         Email email = new Email()
         {
@@ -22,10 +22,10 @@ internal class Program
             Subject = "test subject",
             To = "Jayesh@silmac.com"
         };
-        
 
 
-        //await SendEmailMessage(email);
+
+        await SendEmailMessage(email);
         await ReceiveEmailMessage("email");
         Thread.Sleep(60000);
         await SendFailedEmail(email);

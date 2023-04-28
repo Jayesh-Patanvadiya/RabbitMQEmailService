@@ -193,7 +193,7 @@ namespace RabbitMQEmailService
                         channel.BasicQos(prefetchSize: 0, prefetchCount: 100, global: false);
 
                         var consumer = new EventingBasicConsumer(channel);
-                       channel.BasicConsume(queue: routingKeyName, autoAck: false, consumer: consumer);
+                       channel.BasicConsume(queue: routingKeyName, autoAck: true, consumer: consumer);
 
                         consumer.Received += async (model, ea) =>
                         {
@@ -214,9 +214,9 @@ namespace RabbitMQEmailService
                         };
                         Thread.Sleep(1000);
 
-                        //   channel.BasicConsume(queue: routingKeyName,
-                        //autoAck: true,
-                        //consumer: consumer);
+                        channel.BasicConsume(queue: routingKeyName,
+                     autoAck: true,
+                     consumer: consumer);
                     }
 
                 }
