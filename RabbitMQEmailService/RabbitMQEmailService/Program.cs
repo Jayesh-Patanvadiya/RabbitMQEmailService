@@ -3,66 +3,131 @@ using RabbitMQEmailService;
 using System.Net.Mail;
 using System.Net;
 using System;
+using RabbitMQ.Client.Events;
+using RabbitMQ.Client;
+using System.Text;
 
 internal class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
-        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json", true, true)
-            .AddJsonFile($"appsettings.{environment}.json", true, true)
-            .AddEnvironmentVariables();
-        var config = builder.Build();
 
-        string connectionString = config["ConnectionString"];//Getting Connectionstring from appsettings
 
-        Console.WriteLine($"Environment is: {environment}");
-        Console.WriteLine($"Connection String is:{connectionString}");
+        Email email = new Email()
+        {
+            BCC = "jayesh@silmac.com",
+            Body = "test mail",
+            CC = "Jayesh@silmac.com",
+            From = "jpatanvadiya123@gmail.com",
+            Subject = "test subject",
+            To = "Jayesh@silmac.com"
+        };
+        
 
-        string smtpServer = "smtp-mail.outlook.com";
-        SendEmail(smtpServer);
+
+        await SendEmailMessage(email);
+        await ReceiveEmailMessage("email");
+        Thread.Sleep(60000);
+        await SendFailedEmail(email);
+        await ReceiveEmailFail("FailedEmailModel");
     }
 
-   
+    public static async Task SendEmailMessage(Email email)
+    {
+       
 
-    static void SendEmail(string smtpServer)
+        RabitMQService rabitMQService = new RabitMQService();
+        await rabitMQService.SendEmailMessage(email, "email", 86400000);
+    }
+
+    public static async Task<List<Email>> ReceiveEmailMessage(string routingKeyName)
     {
         try
         {
-            MailMessage mail = new MailMessage();
-            mail.To.Add("jpatanvadiya1@gmail.com");
-            mail.From = new MailAddress("Jayesh@silmac.biz");
-            mail.Subject = "WebSite was down - please test";
-            mail.Body = "WebSite was down - please test";
-            mail.IsBodyHtml = true;
-            SmtpClient smtp = new SmtpClient("smtp-mail.outlook.com", 587);
-            smtp.EnableSsl = true;
-            smtp.UseDefaultCredentials = false;
-            smtp.Credentials = new System.Net.NetworkCredential("Jayesh@silmac.biz", "J@y5142J@y");
-            smtp.Send(mail);
-            //Send teh High priority Email  
-            EmailManager mailMan = new EmailManager(smtpServer);
+            RabitMQService rabitMQService = new RabitMQService();
+            var result = await rabitMQService.ReceiveEmailMessage<Email>(routingKeyName);
+            foreach (var mailSetting in result)
+            {
+                await SendEmail(mailSetting);
 
-            EmailSendConfigure myConfig = new EmailSendConfigure();
-            // replace with your email userName  
-            myConfig.ClientCredentialUserName = "Jayesh@silmac.biz";
-            // replace with your email account password
-            myConfig.ClientCredentialPassword = "J@y5142J@y";
-            myConfig.TOs = new string[] { "jpatanvadiya1@gmail.com" };
-            myConfig.CCs = new string[] { "jpatanvadiya1@gmail.com" };
-            myConfig.From = "Jayesh@silmac.biz";
-            myConfig.FromDisplayName = "Jayesh";
-            myConfig.Priority = System.Net.Mail.MailPriority.Normal;
-            myConfig.Subject = "WebSite was down - please test";
+            }
+            return result;
 
-            EmailContent myContent = new EmailContent();
-            myContent.Content = "The following URLs were down - 1. Foo, 2. bar";
-
-            mailMan.SendMail(myConfig, myContent);
         }
         catch (Exception ex)
         {
+            Console.WriteLine(" [x] error {0}", ex.Message);
+            return new List<Email>();
+        }
+    }
+    public static async Task SendFailedEmail(Email email)
+    {
+        Email email1 = new Email()
+        {
+            BCC = "jayesh@silmac.com",
+            Body = "test mail",
+            CC = "Jayesh@silmac.com",
+            From = "jpatanvadiya1@gmail.com",
+            Subject = "test subject",
+            To = "jpatanvadiya1@gmail.com"
+        };
+        RabitMQService rabitMQ = new RabitMQService();
+
+        // RabitMQ Implementation
+        var result = await rabitMQ.SendFailEmailMessage<Email>(email1, "FailedEmailModel", 86400000);
+
+    }
+    public static async Task ReceiveEmailFail(string route)
+    {
+
+        RabitMQService rabitMQ = new RabitMQService();
+
+        // RabitMQ Implementation
+        var result = await rabitMQ.ReceiveSendFailEmailMessage<Email>(route);
+        foreach (var mailSetting in result)
+        {
+            await SendEmail(mailSetting);
+        }
+    }
+    static async Task SendEmail(Email email)
+    {
+        try
+        {
+            var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile($"appsettings.json", true, true)
+                .AddJsonFile($"appsettings.{environment}.json", true, true)
+                .AddEnvironmentVariables();
+            var config = builder.Build();
+
+            var port = config.GetSection("EmailSMTP:Port").Value;//Getting Port from appsettings
+            string host = config.GetSection("EmailSMTP:Host").Value;
+            string Username = config.GetSection("EmailSMTP:Username").Value;
+            string Password = config.GetSection("EmailSMTP:Password").Value;
+
+            Console.WriteLine($"Environment is: {environment}");
+
+            var portCast = Convert.ToInt32(port);
+
+
+            MailMessage mail = new MailMessage();
+            mail.To.Add(email.To);
+            mail.From = new MailAddress(email.From);
+            mail.CC.Add(email.CC);
+            mail.Bcc.Add(email.BCC);
+            mail.Subject = email.Subject;
+            mail.Body = email.Body;
+            mail.IsBodyHtml = true;
+            SmtpClient smtp = new SmtpClient(host, portCast);
+            smtp.EnableSsl = true;
+            smtp.UseDefaultCredentials = false;
+            smtp.Credentials = new System.Net.NetworkCredential(Username, Password);
+            smtp.Send(mail);
+
+        }
+        catch (Exception ex)
+        {
+            await SendFailedEmail(email);
             Console.WriteLine(ex.Message);
         }
 
